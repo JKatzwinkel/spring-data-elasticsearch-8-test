@@ -1,0 +1,119 @@
+plugins {
+    id 'war'
+    id 'java'
+    id 'jacoco'
+    id 'application'
+    id 'maven-publish'
+    id 'co.uzzu.dotenv.gradle' version '2.0.0'
+    id 'de.undercouch.download' version '5.1.0'
+    id 'org.springframework.boot' version '2.7.1'
+    id 'com.github.ben-manes.versions' version '0.42.0'
+}
+
+group = 'com.github.jkatzwinkel'
+version = '0.0.1-dev'
+sourceCompatibility = '17'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifactId = 'spring-elasticseach-8-test'
+            pom {
+                name = 'Spring-Elasticsearch-8-Tests'
+                description = 'Spring Boot REST app for experimental adoption of Spring Data for Elasticsearch 8'
+            }
+            from components.java
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://jitpack.io' }
+}
+
+configurations {
+    implementation.exclude module: 'spring-boot-starter-tomcat'
+    implementation.exclude group: 'jakarta.xml.bind'
+    implementation.exclude group: 'org.xmlunit'
+    implementation.exclude group: 'org.skyscreamer'
+    implementation.exclude module: 'jackson-dataformat-smile'
+    // ES transport client stuff
+    implementation.exclude module: 'transport'
+    implementation.exclude module: 'transport-netty4-client'
+    testImplementation.exclude module: 'junit-vintage-engine'
+    testImplementation.exclude group: 'org.junit.vintage'
+}
+
+dependencies {
+    implementation 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
+
+    implementation 'org.modelmapper:modelmapper:3.1.0'
+    implementation 'org.apache.commons:commons-compress:1.21'
+    implementation 'org.yaml:snakeyaml:1.30'
+
+    implementation 'org.springframework.boot:spring-boot:3.0.0-M3'
+    implementation 'org.springframework.boot:spring-boot-starter-jetty:3.0.0-M3'
+    implementation 'org.springframework.boot:spring-boot-autoconfigure:3.0.0-M3'
+    implementation 'org.springframework.data:spring-data-elasticsearch:5.0.0-M5'
+    implementation 'org.springframework:spring-webmvc:6.0.0-M5'
+    implementation 'org.apache.logging.log4j:log4j-core:2.18.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.0-alpha7'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:3.0.0-M3'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.9.0-RC1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0-RC1'
+}
+
+application {
+    mainClass = 'es8test.App'
+}
+
+test {
+    useJUnitPlatform{
+      includeTags '!search'
+    }
+    environment "ES_PORT", env.fetch("ES_PORT", "9200")
+    finalizedBy 'jacocoTestReport'
+}
+
+task testSearch(type: Test) {
+    group = 'Verification'
+    description = 'Runs search integration tests against populated ES instance.'
+    systemProperty 'spring.profiles.active', 'search'
+    environment "ES_PORT", env.fetch("ES_PORT", "9200")
+    useJUnitPlatform {
+      includeTags 'search'
+    }
+}
+
+task testAll(type: Test) {
+    group = 'Verification'
+    description = 'Runs both search integration and unit tests.'
+    useJUnitPlatform()
+    environment "ES_PORT", env.fetch("ES_PORT", "9200")
+    finalizedBy 'jacocoTestReport'
+}
+
+jacocoTestReport {
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+springBoot {
+    buildInfo()
+}
+
+bootRun {
+    if (project.hasProperty('args')) {
+        args project.args.split(',')
+    }
+    environment "ES_PORT", env.fetch("ES_PORT", "9200")
+    environment "ES_HOST", env.fetch("ES_HOST", "localhost")
+}
+
