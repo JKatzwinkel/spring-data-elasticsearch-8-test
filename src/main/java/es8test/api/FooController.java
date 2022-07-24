@@ -1,6 +1,7 @@
 package es8test.api;
 
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -49,5 +50,15 @@ public class FooController {
             search.searchResults(q), HttpStatus.OK
         );
     }
-    
+
+    @RequestMapping(value = "/list", method=RequestMethod.GET)
+    public ResponseEntity<List<FooEntity>> list(@RequestParam List<String> ids) {
+        List<FooEntity> results = StreamSupport.stream(
+            repo.findAllById(ids).spliterator(), false
+        ).toList();
+        return new ResponseEntity<>(
+            results, HttpStatus.CREATED
+        );
+    }
+
 }
